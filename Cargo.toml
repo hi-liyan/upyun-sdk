@@ -1,0 +1,12 @@
+[package]
+name = "upyun-sdk"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+hmac-sha1 = "0.2.2"
+sha1 = "0.10.6"
+hmac = "0.12.1"
+reqwest = { version = "0.11.23", features = [] }

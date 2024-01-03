@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
 pub struct UpYunConfig {
-    bucket: String,
-    operator: String,
-    password: String,
-    hosts: HashMap<String, String>,
-    user_agent: String,
+    pub bucket: String,
+    pub operator: String,
+    pub password: String,
+    pub hosts: HashMap<String, String>,
+    pub user_agent: String,
 }
 
 pub struct UpYun {
-    config: UpYunConfig,
+    pub config: UpYunConfig,
 }
 
 impl UpYun {

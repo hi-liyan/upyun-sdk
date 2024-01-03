@@ -1,36 +1,109 @@
-use std::collections::HashMap;
-use std::error::Error;
-use url_escape::encode_path_to_string;
-use crate::auth::UpYun;
+use std::error::Error as StdError;
+use std::str::FromStr;
 
+use reqwest::{Error, Method, Response};
+use reqwest::header::{HeaderMap, HeaderValue};
+use url_escape::encode_path_to_string;
+
+use crate::auth::{RestAuthConfig, UpYun};
+use crate::error::ApiError;
+use crate::utils::get_date;
+
+#[derive(Debug, Clone)]
 struct RestReqConfig {
-    method: String,
+    method: Method,
     uri: String,
-    query: String,
-    headers: HashMap<String, String>,
+    query: Option<String>,
+    headers: Option<HeaderMap>,
 }
 
 impl UpYun {
-    fn do_rest_request(&self, config: RestReqConfig) -> Result<(), Box<dyn Error>> {
-        let mut uri = format!("/{}", self.config.bucket);
-        encode_path_to_string(config.uri, &mut uri);
+    async fn do_rest_request(&self, config: &RestReqConfig) -> Result<Response, Error> {
+        let endpoint = "https://v0.api.upyun.com";
+        let mut encode_uri = format!("{}/{}", endpoint, self.config.bucket);
+        encode_path_to_string(&config.uri, &mut encode_uri);
 
-        todo!()
+        if !encode_uri.ends_with("/") {
+            encode_uri.push('/');
+        }
+
+        if let Some(query) = &config.query {
+            encode_uri.push_str(format!("?{}", query).as_str())
+        }
+
+        let mut headers = if let Some(headers) = config.headers.clone() {
+            headers
+        } else {
+            HeaderMap::new()
+        };
+
+        let date = get_date();
+        println!("日期--> {}", date);
+        // 请求头添加认证签名
+        let signature = self.gen_auth_signature(RestAuthConfig {
+            method: config.method.clone().to_string(),
+            uri: config.uri.clone(),
+            date: date.clone(),
+        });
+        println!("签名--> {}", signature);
+        headers.append("Authorization", HeaderValue::from_str(signature.as_str()).unwrap());
+        headers.append("Date", HeaderValue::from_str(date.clone().as_str()).unwrap());
+        println!("HeaderValue--> {:?}", HeaderValue::from_str(date.clone().as_str()).unwrap());
+
+        self.do_http_request(config.clone().method, encode_uri, Some(headers)).await
     }
 
     /// 获取服务使用量
-    pub fn usage(&self) -> Result<u64, Box<dyn Error>> {
-        let result = self.do_rest_request(RestReqConfig {
-            method: "GET".to_string(),
+    pub async fn usage(&self) -> Result<u64, Box<dyn StdError>> {
+        let result = self.do_rest_request(&RestReqConfig {
+            method: Method::GET,
             uri: "/".to_string(),
-            query: "usage".to_string(),
-            headers: Default::default(),
-        });
-        todo!()
+            query: Some("usage".to_string()),
+            headers: None,
+        }).await;
+
+        let resp = match result {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(Box::try_from(e).unwrap());
+            }
+        };
+
+        if resp.status().as_u16() == 200 {
+            let value_str = resp.text().await.unwrap();
+            let value = u64::from_str(value_str.as_str()).unwrap();
+            return Ok(value);
+        } else {
+            let error: ApiError = resp.json().await.unwrap();
+            return Err(Box::try_from(error).unwrap());
+        }
     }
 
     /// 创建目录
-    pub fn mkdir(&self, path: String) -> Result<(), Box<dyn Error>> {
-        todo!()
+    pub async fn mkdir(&self, path: String) -> Result<(), Box<dyn StdError>> {
+        let mut headers = HeaderMap::new();
+        headers.append("folder", HeaderValue::from_static("true"));
+        headers.append("x-upyun-folder", HeaderValue::from_static("true"));
+
+        let result = self.do_rest_request(&RestReqConfig {
+            method: Method::POST,
+            uri: path,
+            query: None,
+            headers: Some(headers),
+        }).await;
+
+        let resp = match result {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(Box::try_from(e).unwrap());
+            }
+        };
+
+        if resp.status().as_u16() != 200 {
+            let error: ApiError = resp.json().await.unwrap();
+            return Err(Box::try_from(error).unwrap());
+        }
+
+        Ok(())
     }
 }

@@ -1,4 +1,4 @@
-use crate::auth::{UpYun, UpYunConfig};
+use crate::upyun::{UpYun, UpYunConfig};
 
 #[tokio::test]
 async fn test_usage() {

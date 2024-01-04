@@ -2,8 +2,12 @@
 name = "upyun-sdk"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Liyan 721748889@qq.com"]
+description = "Upyun sdk for rust."
+license = "MIT"
+documentation = "https://docs.rs/upyun-sdk"
+homepage = "https://docs.rs/upyun-sdk"
+repository = "https://github.com/hi-liyan/upyun-sdk"
 
 [dependencies]
 hmac-sha1 = "0.2.2"
@@ -17,4 +21,3 @@ base64 = "0.21.5"
 tokio = { version = "1.35.1", features = ["full"] }
 chrono = "0.4.31"
 chrono-tz = "0.8.5"
-chrono_parser = "0.1.0"

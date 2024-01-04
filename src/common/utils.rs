@@ -38,3 +38,35 @@ pub fn sign(method: &String, path: &String, date: &String, operator: &String, pa
 
     format!("UPYUN {}:{}", operator, signature)
 }
+
+/// 为了测试
+pub mod test {
+    use std::{fs, io};
+    use crate::upyun::UpYun;
+
+    /// 读取 cred.txt 文件，里面包含凭证信息
+    ///
+    /// 文件内容格式：
+    ///
+    /// bucket:operator:password
+    #[allow(unused)]
+    fn read_cred_file() -> io::Result<Vec<String>> {
+        // 读取 cred.txt 文件内容到字符串
+        let contents = fs::read_to_string("cred.txt")?;
+
+        let cred = contents.split(':').map(|s| { s.to_string() }).collect();
+        Ok(cred)
+    }
+
+    /// 获取 Upyun 实例
+    #[allow(unused)]
+    pub fn get_upyun() -> UpYun {
+        let cred = read_cred_file().unwrap();
+
+        UpYun::builder()
+            .bucket(&cred[0])
+            .operator(&cred[1])
+            .password(&cred[2])
+            .build()
+    }
+}

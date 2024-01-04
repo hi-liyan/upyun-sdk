@@ -153,16 +153,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "chrono_parser"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "017a347b8a6f6f7268b3aa5ebac577adf8f1fb2721ae00377ae47caf9f41e672"
-dependencies = [
- "chrono",
- "regex",
-]
-
-[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1305,7 +1295,6 @@ dependencies = [
  "base64",
  "chrono",
  "chrono-tz",
- "chrono_parser",
  "hmac",
  "hmac-sha1",
  "reqwest",

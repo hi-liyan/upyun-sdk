@@ -4,7 +4,6 @@ use crate::common::utils::test::get_upyun;
 #[tokio::test]
 async fn test_usage() {
     let upyun = get_upyun();
-
     let usage = upyun.usage().await.unwrap();
     println!("用量：{}", usage);
 }
@@ -13,6 +12,12 @@ async fn test_usage() {
 #[tokio::test]
 async fn test_mkdir() {
     let upyun = get_upyun();
+    upyun.mkdir("/rust/1").await.unwrap();
+}
 
-    let _ = upyun.mkdir("/demo").await.unwrap();
+/// 测试删除目录
+#[tokio::test]
+async fn test_rmdir() {
+    let upyun = get_upyun();
+    upyun.rmdir("/rust/1").await.unwrap();
 }

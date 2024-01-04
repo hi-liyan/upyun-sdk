@@ -1,7 +1,7 @@
-use std::error::Error as StdError;
+use std::error::Error;
 use std::str::FromStr;
 
-use reqwest::{Error, Method, Response};
+use reqwest::{Error as ReqwestError, Method, Response};
 use reqwest::header::{HeaderMap, HeaderValue};
 use url_escape::encode_path;
 
@@ -10,7 +10,7 @@ use crate::common::utils::{get_rfc1123_date, sign};
 use crate::upyun::UpYun;
 
 impl UpYun {
-    async fn request(&self, method: Method, uri: &str, query: Option<&str>, headers: Option<HeaderMap>) -> Result<Response, Error> {
+    async fn request(&self, method: Method, uri: &str, query: Option<&str>, headers: Option<HeaderMap>) -> Result<Response, ReqwestError> {
         // 获取当前时间的 RFC1123 格式
         let date = get_rfc1123_date();
 
@@ -18,7 +18,6 @@ impl UpYun {
         let endpoint = self.endpoint.value();
         let uri = format!("/{}", uri).trim_start_matches('/').to_string();
         let path = format!("/{}/{}", self.bucket, uri);
-
 
         // 构建 Query 参数
         let query = query.map_or_else(|| "".to_string(), |q| format!("?{}", q));
@@ -47,56 +46,59 @@ impl UpYun {
 
 impl UpYun {
     /// 获取服务使用量
-    pub async fn usage(&self) -> Result<u64, Box<dyn StdError>> {
-        let result = self.request(
+    pub async fn usage(&self) -> Result<u64, Box<dyn Error>> {
+        let resp = self.request(
             Method::GET,
             "/",
             Some("usage"),
             None,
-        ).await;
+        ).await?;
 
-        let resp = match result {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(Box::try_from(e).unwrap());
-            }
-        };
-
-        if resp.status().as_u16() == 200 {
-            let value_str = resp.text().await.unwrap();
-            let value = u64::from_str(value_str.as_str()).unwrap();
-            return Ok(value);
-        } else {
-            let error: ApiError = resp.json().await.unwrap();
-            return Err(Box::try_from(error).unwrap());
-        }
+        let resp = handle_response(resp).await?;
+        let value_str = resp.text().await.unwrap();
+        let value = u64::from_str(value_str.as_str()).unwrap();
+        Ok(value)
     }
 
     /// 创建目录
-    pub async fn mkdir(&self, path: &str) -> Result<(), Box<dyn StdError>> {
+    pub async fn mkdir(&self, path: &str) -> Result<(), Box<dyn Error>> {
         let mut headers = HeaderMap::new();
         headers.append("folder", HeaderValue::from_static("true"));
         headers.append("x-upyun-folder", HeaderValue::from_static("true"));
 
-        let result = self.request(
+        let resp = self.request(
             Method::POST,
             path,
             None,
             Some(headers),
-        ).await;
+        ).await?;
 
-        let resp = match result {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(Box::try_from(e).unwrap());
-            }
-        };
-
-        if resp.status().as_u16() != 200 {
-            let error: ApiError = resp.json().await.unwrap();
-            return Err(Box::try_from(error).unwrap());
-        }
+        handle_response(resp).await?;
 
         Ok(())
     }
+
+    /// 删除目录
+    pub async fn rmdir(&self, path: &str) -> Result<(), Box<dyn Error>> {
+        let resp = self.request(
+            Method::DELETE,
+            path,
+            None,
+            None,
+        ).await?;
+
+        handle_response(resp).await?;
+
+        Ok(())
+    }
+}
+
+/// 处理响应状态
+async fn handle_response(resp: Response) -> Result<Response, Box<dyn Error>> {
+    if resp.status().as_u16() != 200 {
+        let error: ApiError = resp.json().await.unwrap();
+        return Err(Box::try_from(error).unwrap());
+    }
+
+    Ok(resp)
 }

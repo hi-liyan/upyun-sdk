@@ -1,13 +1,14 @@
+use base64::Engine;
+use base64::engine::general_purpose;
 use chrono::Utc;
-use chrono_tz::Asia::Shanghai;
 use crypto::digest::Digest;
 use crypto::md5::Md5;
 use hmac::{Hmac, Mac};
 use sha1::Sha1;
 
 /// 获取日期时间，GMT 格式字符串 (RFC 1123)，如 Wed, 29 Oct 2014 02:26:58 GMT
-pub fn get_date() -> String {
-    let now_time = Utc::now().with_timezone(&Shanghai);
+pub fn get_rfc1123_date() -> String {
+    let now_time = Utc::now();
     now_time.format("%a, %d %b %Y %H:%M:%S GMT").to_string()
 }
 
@@ -23,4 +24,17 @@ pub fn md5(input: String) -> String {
     let mut md5 = Md5::new();
     md5.input(input.as_bytes());
     md5.result_str()
+}
+
+/// 生成认证签名
+pub fn sign(method: &String, path: &String, date: &String, operator: &String, password: &String) -> String {
+    let raw = format!("{}&{}&{}", method, path, date);
+
+    // 计算 HMAC-SHA1
+    let hmac_data = hmac_sha1(password.as_bytes(), raw.as_bytes());
+
+    // 将结果进行 Base64 编码
+    let signature = general_purpose::STANDARD.encode(&hmac_data);
+
+    format!("UPYUN {}:{}", operator, signature)
 }

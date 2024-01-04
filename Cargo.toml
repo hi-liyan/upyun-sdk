@@ -17,3 +17,4 @@ base64 = "0.21.5"
 tokio = { version = "1.35.1", features = ["full"] }
 chrono = "0.4.31"
 chrono-tz = "0.8.5"
+chrono_parser = "0.1.0"

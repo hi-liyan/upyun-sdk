@@ -1,42 +1,27 @@
-use crate::upyun::{UpYun, UpYunConfig};
+use crate::upyun::{Endpoint, UpYun};
+
+#[allow(unused)]
+fn get_upyun() -> UpYun {
+    UpYun::builder()
+        .bucket("surcode")
+        .operator("rust1")
+        .password("ZzSxVESp4OvqvaLEkeIuTOf5tsn2LPsM")
+        .timeout(30000)
+        .endpoint(Endpoint::EdAuto)
+        .build()
+}
 
 #[tokio::test]
 async fn test_usage() {
-    let config = UpYunConfig {
-        bucket: "surcode".to_string(),
-        operator: "rust1".to_string(),
-        password: "ZzSxVESp4OvqvaLEkeIuTOf5tsn2LPsM".to_string(),
-        timeout: None,
-    };
-    let upyun = UpYun::new(config);
+    let upyun = get_upyun();
 
-    let result = upyun.usage().await;
-    println!("执行了吗？");
-
-    match result {
-        Ok(usage) => {
-            println!("用量：{}", usage)
-        }
-        Err(e) => {
-            println!("错误：{:?}", e);
-        }
-    }
+    let usage = upyun.usage().await.unwrap();
+    println!("用量：{}", usage);
 }
 
 #[tokio::test]
 async fn test_mkdir() {
-    let config = UpYunConfig {
-        bucket: "surcode".to_string(),
-        operator: "rust1".to_string(),
-        password: "ZzSxVESp4OvqvaLEkeIuTOf5tsn2LPsM".to_string(),
-        timeout: None,
-    };
-    let upyun = UpYun::new(config);
+    let upyun = get_upyun();
 
-    let result = upyun.mkdir("for-rust".to_string()).await;
-    println!("执行了吗？");
-
-    if let Err(e) = result {
-        println!("错误：{:?}", e);
-    }
+    let _ = upyun.mkdir("/for-rust/2").await.unwrap();
 }

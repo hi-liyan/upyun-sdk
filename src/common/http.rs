@@ -1,35 +1,30 @@
 use std::time::Duration;
-use reqwest::header::HeaderMap;
+
 use reqwest::{Error, Method, Response};
+use reqwest::header::HeaderMap;
+
 use crate::upyun::UpYun;
 
-#[derive(Debug, Clone)]
-pub struct HttpConfig {
-    pub method: Method,
-    pub url: String,
-    pub headers: Option<HeaderMap>
-}
+impl UpYun {
+    /// 发起 HTTP 请求
+    pub async fn http(&self, method: Method, url: String, headers: Option<HeaderMap>) -> Result<Response, Error> {
+        // 创建一个请求构建器，并设置超时时间
+        let mut req_builder = self.client
+            .request(method, url)
+            .timeout(Duration::from_millis(self.timeout));
 
-pub async fn http(upyun: &UpYun, config: &HttpConfig) -> Result<Response, Error> {
-    let client = &upyun.http_client;
+        // 如果有传入请求头，则添加到请求构建器中
+        if let Some(headers) = headers {
+            req_builder = req_builder.headers(headers);
+        }
 
-    // 请求超时时间，默认3000ms
-    let timeout = if let Some(timeout) = upyun.config.timeout {
-        timeout
-    } else {
-        3000
-    };
+        // 构建请求
+        let req = req_builder
+            .build()
+            .unwrap();
 
-    let mut req_builder = client.request(config.method.clone(), &config.url)
-        .timeout(Duration::from_millis(timeout));
-
-    if let Some(headers) = config.headers.clone() {
-        req_builder = req_builder.headers(headers);
+        // 使用 reqwest 执行请求，并返回结果
+        self.client.execute(req).await
     }
-
-    let req = req_builder
-        .build()
-        .unwrap();
-
-    client.execute(req).await
 }
+

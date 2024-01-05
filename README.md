@@ -1,4 +1,4 @@
-# Upyun sdk for rust
+# Upyun sdk for rust1
 
 又拍云存储 Rust SDK，基于 [又拍云存储 HTTP REST API 接口](https://help.upyun.com/knowledge-base/rest_api/)  和 [又拍云云处理文档 ](http://docs.upyun.com/cloud/)开发。
 

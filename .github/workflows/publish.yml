@@ -1,0 +1,39 @@
+name: Publish Rust Crate and Create Release
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish_and_release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Login to Crates.io
+      env:
+        CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
+      run: cargo login $CRATES_TOKEN
+
+    - name: Build and Publish to Crates.io
+      run: cargo publish
+
+    - name: Get version from Cargo.toml
+      id: get_version
+      run: echo "::set-output name=version::$(grep -oP 'version = "\K[0-9]+\.[0-9]+\.[0-9]+' Cargo.toml)"
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }} # 使用从 Cargo.toml 获取的版本号
+        release_name: Release ${{ steps.get_version.outputs.version }}
+        body: "Automatic release created from the ${{ github.ref }} branch."
+        draft: false
+        prerelease: false

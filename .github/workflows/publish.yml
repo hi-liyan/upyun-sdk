@@ -14,10 +14,8 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Login to Crates.io
-      env:
-        CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
-      run: echo "// crates.io token" > ~/.cargo/credentials && echo "token = \"$CRATES_TOKEN\"" >> ~/.cargo/credentials
+    - name: Setup Cargo credentials
+      run: echo -e "[registry]\ntoken = \"${{ secrets.CRATES_TOKEN }}\"" > ~/.cargo/credentials
 
     - name: Build and Publish to Crates.io
       run: cargo publish

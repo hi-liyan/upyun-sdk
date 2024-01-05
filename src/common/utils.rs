@@ -1,10 +1,16 @@
+use std::time::Duration;
+
 use base64::Engine;
 use base64::engine::general_purpose;
 use chrono::Utc;
 use crypto::digest::Digest;
 use crypto::md5::Md5;
 use hmac::{Hmac, Mac};
+use reqwest::{Error, Method, Response};
+use reqwest::header::HeaderMap;
 use sha1::Sha1;
+
+use crate::upyun::UpYun;
 
 /// 获取日期时间，GMT 格式字符串 (RFC 1123)，如 Wed, 29 Oct 2014 02:26:58 GMT
 pub fn get_rfc1123_date() -> String {
@@ -14,7 +20,8 @@ pub fn get_rfc1123_date() -> String {
 
 /// HMAC SHA1 加密
 pub fn hmac_sha1(key: &[u8], message: &[u8]) -> Vec<u8> {
-    let mut hmac: Hmac<Sha1> = Hmac::<Sha1>::new_from_slice(key).expect("HMAC can take key of any size");
+    let mut hmac: Hmac<Sha1> =
+        Hmac::<Sha1>::new_from_slice(key).expect("HMAC can take key of any size");
     hmac.update(message);
     hmac.finalize().into_bytes().to_vec()
 }
@@ -27,7 +34,13 @@ pub fn md5(input: String) -> String {
 }
 
 /// 生成认证签名
-pub fn sign(method: &String, path: &String, date: &String, operator: &String, password: &String) -> String {
+pub fn sign(
+    method: &String,
+    path: &String,
+    date: &String,
+    operator: &String,
+    password: &String,
+) -> String {
     let raw = format!("{}&{}&{}", method, path, date);
 
     // 计算 HMAC-SHA1
@@ -39,9 +52,30 @@ pub fn sign(method: &String, path: &String, date: &String, operator: &String, pa
     format!("UPYUN {}:{}", operator, signature)
 }
 
+/// 发起 HTTP 请求
+pub async fn http(upyun: &UpYun, method: Method, url: String, headers: Option<HeaderMap>) -> Result<Response, Error> {
+    // 创建一个请求构建器，并设置超时时间
+    let mut req_builder = upyun
+        .client
+        .request(method, url)
+        .timeout(Duration::from_millis(upyun.timeout));
+
+    // 如果有传入请求头，则添加到请求构建器中
+    if let Some(headers) = headers {
+        req_builder = req_builder.headers(headers);
+    }
+
+    // 构建请求
+    let req = req_builder.build().unwrap();
+
+    // 使用 reqwest 执行请求，并返回结果
+    upyun.client.execute(req).await
+}
+
 /// 为了测试
 pub mod test {
     use std::{fs, io};
+
     use crate::upyun::UpYun;
 
     /// 读取 cred.txt 文件，里面包含凭证信息
@@ -54,7 +88,7 @@ pub mod test {
         // 读取 cred.txt 文件内容到字符串
         let contents = fs::read_to_string("cred.txt")?;
 
-        let cred = contents.split(':').map(|s| { s.to_string() }).collect();
+        let cred = contents.split(':').map(|s| s.to_string()).collect();
         Ok(cred)
     }
 

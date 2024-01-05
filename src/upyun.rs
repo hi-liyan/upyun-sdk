@@ -5,28 +5,28 @@ use crate::common::utils::md5;
 ///
 /// 可选值：
 ///
-/// `EdAuto`：根据网络条件自动选择接入点:v0.api.upyun.com（默认）
+/// `Auto`：根据网络条件自动选择接入点:v0.api.upyun.com（默认）
 ///
-/// `EdTelecom`：电信接入点:v1.api.upyun.com
+/// `Telecom`：电信接入点:v1.api.upyun.com
 ///
-/// `EdCnc`：联通网通接入点:v2.api.upyun.com
+/// `Cnc`：联通网通接入点:v2.api.upyun.com
 ///
-/// `EdCtt`：移动铁通接入点:v3.api.upyun.com
+/// `Ctt`：移动铁通接入点:v3.api.upyun.com
 #[derive(Clone)]
 pub enum Endpoint {
-    EdAuto,
-    EdTelecom,
-    EdCnc,
-    EdCtt,
+    Auto,
+    Telecom,
+    Cnc,
+    Ctt,
 }
 
 impl Endpoint {
     pub fn value(&self) -> &'static str {
         match self {
-            Endpoint::EdAuto => "https://v0.api.upyun.com",
-            Endpoint::EdTelecom => "https://v1.api.upyun.com",
-            Endpoint::EdCnc => "https://v2.api.upyun.com",
-            Endpoint::EdCtt => "https://v3.api.upyun.com"
+            Endpoint::Auto => "https://v0.api.upyun.com",
+            Endpoint::Telecom => "https://v1.api.upyun.com",
+            Endpoint::Cnc => "https://v2.api.upyun.com",
+            Endpoint::Ctt => "https://v3.api.upyun.com"
         }
     }
 }
@@ -120,7 +120,7 @@ impl UpyunBuilder {
             // 超时时间默认30s
             timeout: self.timeout.unwrap_or(30 * 1000),
             // 默认为自动识别接入点
-            endpoint: self.endpoint.unwrap_or(Endpoint::EdAuto),
+            endpoint: self.endpoint.unwrap_or(Endpoint::Auto),
             client: Client::new()
         }
     }

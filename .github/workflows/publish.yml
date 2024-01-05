@@ -23,7 +23,8 @@ jobs:
     - name: Get version from Cargo.toml
       id: get_version
       run: |
-        echo version=$(grep -oP 'version = "\K[0-9]+\.[0-9]+\.[0-9]+' ~/.runner/Cargo.toml) >> $GITHUB_OUTPUT
+        echo $(ls)
+        echo version=$(grep -oP 'version = "\K[0-9]+\.[0-9]+\.[0-9]+' Cargo.toml) >> $GITHUB_OUTPUT
         echo "--> ${{ steps.get_version.outputs.version }}"
 
     - name: Create Release

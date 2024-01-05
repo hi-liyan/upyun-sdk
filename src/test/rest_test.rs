@@ -21,3 +21,10 @@ async fn test_rmdir() {
     let upyun = get_upyun();
     upyun.rmdir("/rust/1").await.unwrap();
 }
+
+/// 测试删除文件
+#[tokio::test]
+async fn test_rm() {
+    let upyun = get_upyun();
+    upyun.rmdir("/rust/image.jpg").await.unwrap();
+}

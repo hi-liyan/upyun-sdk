@@ -6,6 +6,7 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use url_escape::encode_path;
 
 use crate::common::error::ApiError;
+use crate::common::http::http;
 use crate::common::utils::{get_rfc1123_date, sign};
 use crate::upyun::UpYun;
 
@@ -40,7 +41,7 @@ impl UpYun {
         headers.append("Authorization", HeaderValue::from_str(&sign).unwrap());
 
         // 发起 HTTP 请求
-        self.http(method, url, Some(headers)).await
+        http(self, method, url, Some(headers)).await
     }
 }
 
@@ -61,14 +62,14 @@ impl UpYun {
     }
 
     /// 创建目录
-    pub async fn mkdir(&self, path: &str) -> Result<(), Box<dyn Error>> {
+    pub async fn mkdir(&self, path_to_folder: &str) -> Result<(), Box<dyn Error>> {
         let mut headers = HeaderMap::new();
         headers.append("folder", HeaderValue::from_static("true"));
         headers.append("x-upyun-folder", HeaderValue::from_static("true"));
 
         let resp = self.request(
             Method::POST,
-            path,
+            path_to_folder,
             None,
             Some(headers),
         ).await?;
@@ -79,10 +80,24 @@ impl UpYun {
     }
 
     /// 删除目录
-    pub async fn rmdir(&self, path: &str) -> Result<(), Box<dyn Error>> {
+    pub async fn rmdir(&self, path_to_folder: &str) -> Result<(), Box<dyn Error>> {
         let resp = self.request(
             Method::DELETE,
-            path,
+            path_to_folder,
+            None,
+            None,
+        ).await?;
+
+        handle_response(resp).await?;
+
+        Ok(())
+    }
+
+    /// 删除文件
+    pub async fn rm_file(&self, path_to_file: &str) -> Result<(), Box<dyn Error>> {
+        let resp = self.request(
+            Method::DELETE,
+            path_to_file,
             None,
             None,
         ).await?;

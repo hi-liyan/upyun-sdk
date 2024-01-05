@@ -33,11 +33,17 @@ impl Endpoint {
 
 /// Upyun 实例
 pub struct UpYun {
+    /// 服务名称
     pub bucket: String,
+    /// 操作员
     pub operator: String,
+    /// 密码
     pub password: String,
+    /// 请求超时时间（默认：30s）
     pub timeout: u64,
+    /// 接入点（默认为自动识别接入点）
     pub endpoint: Endpoint,
+    /// HTTP 客户端
     pub client: Client
 }
 
@@ -51,6 +57,7 @@ pub struct UpyunBuilder {
 }
 
 impl UpYun {
+    /// 构造器
     pub fn builder() -> UpyunBuilder {
         UpyunBuilder {
             bucket: None,
@@ -63,37 +70,37 @@ impl UpYun {
 }
 
 impl UpyunBuilder {
-    // 服务名称
+    /// 服务名称
     pub fn bucket(mut self, bucket: &str) -> Self {
         self.bucket = Some(bucket.to_string());
         self
     }
 
-    // 操作员
+    /// 操作员
     pub fn operator(mut self, operator: &str) -> Self {
         self.operator = Some(operator.to_string());
         self
     }
 
-    // 密码
+    /// 密码
     pub fn password(mut self, password: &str) -> Self {
         self.password = Some(password.to_string());
         self
     }
 
-    // 请求超时时间（默认：30s）
+    /// 请求超时时间（默认：30s）
     pub fn timeout(mut self, timeout: u64) -> Self {
         self.timeout = Some(timeout);
         self
     }
 
-    // 接入点（默认为自动识别接入点）
+    /// 接入点（默认为自动识别接入点）
     pub fn endpoint(mut self, endpoint: Endpoint) -> Self {
         self.endpoint = Some(endpoint);
         self
     }
 
-    // 构造 Upyun 实例
+    /// 构造 Upyun 实例
     pub fn build(self) -> UpYun {
         if self.bucket.is_none() {
             panic!("Bucket is required.")

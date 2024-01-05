@@ -17,7 +17,7 @@ jobs:
     - name: Login to Crates.io
       env:
         CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
-      run: cargo login $CRATES_TOKEN
+      run: echo "// crates.io token" > ~/.cargo/credentials && echo "token = \"$CRATES_TOKEN\"" >> ~/.cargo/credentials
 
     - name: Build and Publish to Crates.io
       run: cargo publish

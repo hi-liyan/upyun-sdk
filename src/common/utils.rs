@@ -6,7 +6,7 @@ use chrono::Utc;
 use crypto::digest::Digest;
 use crypto::md5::Md5;
 use hmac::{Hmac, Mac};
-use reqwest::{Error, Method, Response};
+use reqwest::{Body, Error, Method, Response};
 use reqwest::header::HeaderMap;
 use sha1::Sha1;
 
@@ -53,7 +53,7 @@ pub fn sign(
 }
 
 /// 发起 HTTP 请求
-pub async fn http(upyun: &UpYun, method: Method, url: String, headers: Option<HeaderMap>) -> Result<Response, Error> {
+pub async fn http(upyun: &UpYun, method: Method, url: String, headers: Option<HeaderMap>, body: Option<Body>) -> Result<Response, Error> {
     // 创建一个请求构建器，并设置超时时间
     let mut req_builder = upyun
         .client
@@ -63,6 +63,11 @@ pub async fn http(upyun: &UpYun, method: Method, url: String, headers: Option<He
     // 如果有传入请求头，则添加到请求构建器中
     if let Some(headers) = headers {
         req_builder = req_builder.headers(headers);
+    }
+
+    // 如果有传入请求体，则添加到请求构建器中
+    if let Some(body) = body {
+        req_builder = req_builder.body(body);
     }
 
     // 构建请求

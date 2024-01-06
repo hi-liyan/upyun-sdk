@@ -1,34 +1,43 @@
 use std::error::Error;
 use std::str::FromStr;
 
-use reqwest::{Error as ReqwestError, Method, Response};
+use reqwest::{Body, Error as ReqwestError, Method, Response};
 use reqwest::header::{HeaderMap, HeaderValue};
 use url_escape::encode_path;
 
 use crate::common::error::ApiError;
 use crate::common::utils::{get_rfc1123_date, http, sign};
-use crate::rest_type::{CopyParams, FileInfo, ListDir, ListDirParams, MoveParams};
+use crate::rest_type::{CopyParams, FileInfo, ListDir, ListDirParams, MoveParams, UploadParams};
 use crate::upyun::UpYun;
 
+/// 请求配置
+struct RequestConfig {
+    method: Method,
+    uri: String,
+    query: Option<String>,
+    headers: Option<HeaderMap>,
+    body: Option<Body>,
+}
+
 impl UpYun {
-    async fn request(&self, method: Method, uri: &str, query: Option<&str>, headers: Option<HeaderMap>) -> Result<Response, ReqwestError> {
+    async fn request(&self, config: RequestConfig) -> Result<Response, ReqwestError> {
         // 获取当前时间的 RFC1123 格式
         let date = get_rfc1123_date();
 
         // 获取 Endpoint 和整理 URI
         let endpoint = self.endpoint.value();
-        let uri = format!("/{}", uri).trim_start_matches('/').to_string();
+        let uri = format!("/{}", config.uri).trim_start_matches('/').to_string();
         let path = format!("/{}/{}", self.bucket, uri);
 
         // 构建 Query 参数
-        let query = query.map_or_else(|| "".to_string(), |q| format!("?{}", q));
+        let query = config.query.map_or_else(|| "".to_string(), |q| format!("?{}", q));
 
         // 构建完整的 URL
         let url = format!("{}{}{}", endpoint, path, query);
 
         // 生成签名
         let sign = sign(
-            &method.to_string(),
+            &config.method.to_string(),
             &encode_path(&path).to_string(),
             &date,
             &self.operator,
@@ -36,24 +45,25 @@ impl UpYun {
         );
 
         // 设置请求头
-        let mut headers = headers.unwrap_or_default();
+        let mut headers = config.headers.unwrap_or_default();
         headers.append("Date", HeaderValue::from_str(&date).unwrap());
         headers.append("Authorization", HeaderValue::from_str(&sign).unwrap());
 
         // 发起 HTTP 请求
-        http(self, method, url, Some(headers)).await
+        http(self, config.method, url, Some(headers), config.body).await
     }
 }
 
 impl UpYun {
     /// 获取服务使用量
     pub async fn usage(&self) -> Result<u64, Box<dyn Error>> {
-        let resp = self.request(
-            Method::GET,
-            "/",
-            Some("usage"),
-            None,
-        ).await?;
+        let resp = self.request(RequestConfig {
+            method: Method::GET,
+            uri: "/".to_string(),
+            query: Some("usage".to_string()),
+            headers: None,
+            body: None,
+        }).await?;
 
         let resp = handle_response(resp).await?;
         let value_str = resp.text().await.unwrap();
@@ -67,12 +77,13 @@ impl UpYun {
         headers.append("folder", HeaderValue::from_static("true"));
         headers.append("x-upyun-folder", HeaderValue::from_static("true"));
 
-        let resp = self.request(
-            Method::POST,
-            path_to_folder,
-            None,
-            Some(headers),
-        ).await?;
+        let resp = self.request(RequestConfig {
+            method: Method::PUT,
+            uri: path_to_folder.to_string(),
+            query: None,
+            headers: Some(headers),
+            body: None,
+        }).await?;
 
         handle_response(resp).await?;
 
@@ -80,15 +91,16 @@ impl UpYun {
     }
 
     /// 删除目录或文件
-    /// 
+    ///
     /// path 可以是目录或文件路径，如果是目录，只允许删除空的目录，否则删除请求会被拒绝
     pub async fn rm(&self, path: &str) -> Result<(), Box<dyn Error>> {
-        let resp = self.request(
-            Method::DELETE,
-            path,
-            None,
-            None,
-        ).await?;
+        let resp = self.request(RequestConfig {
+            method: Method::DELETE,
+            uri: path.to_string(),
+            query: None,
+            headers: None,
+            body: None,
+        }).await?;
 
         handle_response(resp).await?;
 
@@ -97,16 +109,17 @@ impl UpYun {
 
     /// 获取文件信息
     pub async fn file_info(&self, path_to_file: &str) -> Result<FileInfo, Box<dyn Error>> {
-        let resp = self.request(
-            Method::HEAD,
-            path_to_file,
-            None,
-            None
-        ).await?;
+        let resp = self.request(RequestConfig {
+            method: Method::HEAD,
+            uri: path_to_file.to_string(),
+            query: None,
+            headers: None,
+            body: None,
+        }).await?;
 
         let resp = handle_response(resp).await?;
         let headers = resp.headers();
-        
+
         Ok(FileInfo {
             x_upyun_file_type: headers.get("x-upyun-file-type").unwrap().to_str().unwrap().to_string(),
             x_upyun_file_size: headers.get("x-upyun-file-size").map(|v| v.to_str().unwrap().parse::<u64>().unwrap()),
@@ -133,23 +146,24 @@ impl UpYun {
             }
         }
 
-        let resp = self.request(
-            Method::GET,
-            path_to_folder,
-            None,
-            Some(headers),
-        ).await?;
-        
+        let resp = self.request(RequestConfig {
+            method: Method::GET,
+            uri: path_to_folder.to_string(),
+            query: None,
+            headers: Some(headers),
+            body: None,
+        }).await?;
+
         let resp = handle_response(resp).await?;
         let value: ListDir = resp.json().await.unwrap();
-        
+
         Ok(value)
     }
 
     /// 复制文件
     ///
-    /// 同 `bucket` 下复制文件。只能操作文件，不能操作文件夹。
-    pub async fn copy(&self, save_as_file: &str, params: &CopyParams) -> Result<(), Box<dyn Error>> {
+    /// 同一个 `bucket` 下复制文件。并且它只能操作文件，不能操作文件夹。
+    pub async fn copy_file(&self, save_as_file: &str, params: CopyParams) -> Result<(), Box<dyn Error>> {
         // 设置请求头
         let mut headers = HeaderMap::new();
         headers.append("X-Upyun-Copy-Source", HeaderValue::from_str(&format!("/{}/{}", self.bucket, params.source_path)).unwrap());
@@ -162,12 +176,13 @@ impl UpYun {
             headers.append("Content-MD5", HeaderValue::from_str(content_md5).unwrap());
         }
 
-        let resp = self.request(
-            Method::PUT,
-            save_as_file,
-            None,
-            Some(headers),
-        ).await?;
+        let resp = self.request(RequestConfig {
+            method: Method::PUT,
+            uri: save_as_file.to_string(),
+            query: None,
+            headers: Some(headers),
+            body: None,
+        }).await?;
 
         handle_response(resp).await?;
 
@@ -176,8 +191,10 @@ impl UpYun {
 
     /// 移动文件
     ///
-    /// 同 `bucket` 下移动文件，可以进行文件重命名、文件移动。它只能操作文件，不能操作文件夹。
-    pub async fn mv(&self, save_as_file: &str, params: &MoveParams) -> Result<(), Box<dyn Error>> {
+    /// 该操作可以进行文件重命名、文件移动。
+    ///
+    /// 同一个 `bucket` 下移动文件。并且它只能操作文件，不能操作文件夹。
+    pub async fn move_file(&self, save_as_file: &str, params: MoveParams) -> Result<(), Box<dyn Error>> {
         // 设置请求头
         let mut headers = HeaderMap::new();
         headers.append("X-Upyun-Move-Source", HeaderValue::from_str(&format!("/{}/{}", self.bucket, params.source_path)).unwrap());
@@ -190,19 +207,75 @@ impl UpYun {
             headers.append("Content-MD5", HeaderValue::from_str(content_md5).unwrap());
         }
 
-        let resp = self.request(
-            Method::PUT,
-            save_as_file,
-            None,
-            Some(headers),
-        ).await?;
+        let resp = self.request(RequestConfig {
+            method: Method::PUT,
+            uri: save_as_file.to_string(),
+            query: None,
+            headers: Some(headers),
+            body: None,
+        }).await?;
 
         handle_response(resp).await?;
 
         Ok(())
     }
 
+    /// 下载文件
+    pub async fn download(&self, path_to_file: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+        let resp = self.request(RequestConfig {
+            method: Method::GET,
+            uri: path_to_file.to_string(),
+            query: None,
+            headers: None,
+            body: None,
+        }).await?;
 
+        let resp = handle_response(resp).await?;
+
+        let bytes = resp.bytes().await.unwrap();
+        Ok(bytes.to_vec())
+    }
+
+    /// 上传文件
+    pub async fn upload(&self, path_to_file: &str, file: Vec<u8>, params: Option<UploadParams>) -> Result<(), Box<dyn Error>> {
+        // 设置请求头
+        let mut headers = HeaderMap::new();
+        headers.append("Date", HeaderValue::from_str(&get_rfc1123_date()).unwrap());
+        headers.append("Content-Length", HeaderValue::from_str(&file.len().to_string()).unwrap());
+
+        if let Some(params) = params {
+            if let Some(content_md5) = &params.content_md5 {
+                headers.append("Content-MD5", HeaderValue::from_str(content_md5).unwrap());
+            }
+            if let Some(content_type) = &params.content_type {
+                headers.append("Content-Type", HeaderValue::from_str(content_type).unwrap());
+            }
+            if let Some(content_secret) = &params.content_secret {
+                headers.append("Content-Secret", HeaderValue::from_str(content_secret).unwrap());
+            }
+            if let Some(x_upyun_meta_x) = &params.x_upyun_meta_x {
+                headers.append("x-upyun-meta-x", HeaderValue::from_str(x_upyun_meta_x).unwrap());
+            }
+            if let Some(x_upyun_meta_ttl) = params.x_upyun_meta_ttl {
+                headers.append("x-upyun-meta-ttl", HeaderValue::from(x_upyun_meta_ttl));
+            }
+            if let Some(x_gmkerl_thumb) = &params.x_gmkerl_thumb {
+                headers.append("x-gmkerl-thumb", HeaderValue::from_str(x_gmkerl_thumb).unwrap());
+            }
+        }
+
+        let resp = self.request(RequestConfig {
+            method: Method::PUT,
+            uri: path_to_file.to_string(),
+            query: None,
+            headers: Some(headers),
+            body: Some(Body::from(file)),
+        }).await?;
+
+        handle_response(resp).await?;
+
+        Ok(())
+    }
 }
 
 /// 处理响应状态

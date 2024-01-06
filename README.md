@@ -15,6 +15,8 @@
     * [获取目录文件列表](#获取目录文件列表)
     * [复制文件](#复制文件)
     * [移动文件](#移动文件)
+    * [下载文件](#下载文件)
+    * [上传文件](#上传文件)
 
 ## 用法
 
@@ -22,7 +24,7 @@
 
 ```toml
 [dependencies]
-upyun-sdk = "0.1.2"
+upyun-sdk = "0.1.3"
 ```
 
 ### 初始化 Upyun
@@ -85,13 +87,13 @@ async fn main() {
         x_list_limit: Some(2),
         x_list_order: Some("desc".to_string())
     };
-    let dirlist = upyun.list_dir("/rust", Some(params)).await.unwrap();
+    let dir_list = upyun.list_dir("/rust", Some(params)).await.unwrap();
 }
 ```
 
 #### 复制文件
 
-同一个 `bucket` 下复制文件。并且只能操作文件，不能操作文件夹。
+同一个 `bucket` 下复制文件。并且它只能操作文件，不能操作文件夹。
 
 ```rust
 async fn main() {
@@ -101,13 +103,13 @@ async fn main() {
         content_md5: None
     };
 
-    upyun.copy("/rust/image_copy.jpg", &params).await.unwrap();
+    upyun.copy_file("/rust/image_copy.jpg", &params).await.unwrap();
 }
 ```
 
 #### 移动文件
 
-同一个 `bucket` 下移动文件，可以进行文件重命名、文件移动。它只能操作文件，不能操作文件夹。
+该操作可以实现文件重命名、文件移动。同一个 `bucket` 下移动文件，它只能操作文件，不能操作文件夹。
 
 ```rust
 async fn main() {
@@ -117,6 +119,37 @@ async fn main() {
         content_md5: None
     };
 
-    upyun.mv("/rust/1/image.jpg", &params).await.unwrap();
+    upyun.move_file("/rust/1/image.jpg", &params).await.unwrap();
+}
+```
+
+#### 下载文件
+
+```rust
+async fn main() {
+    let bytes: Vec<u8> = upyun.download("/rust/image.jpg").await.unwrap();
+
+    let path = Path::new("./image.jpg");
+    let mut file = File::create(path).unwrap();
+    file.write_all(&bytes).unwrap();
+}
+```
+
+#### 上传文件
+
+```rust
+async fn main() {
+    let file: Vec<u8> = read_file_to_vec("./image.jpg").unwrap();
+    // 可选参数
+    let params = UploadParams {
+        content_type: None,
+        content_md5: None,
+        content_secret: None,
+        x_upyun_meta_x: None,
+        x_upyun_meta_ttl: None,
+        x_gmkerl_thumb: None,
+    };
+
+    upyun.upload("/rust/1/image.jpg", file, Some(params)).await.unwrap()
 }
 ```

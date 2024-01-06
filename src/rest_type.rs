@@ -64,3 +64,20 @@ pub struct MoveParams {
     /// 请求的 MD5 值，需要服务端进行 MD5 校验请填写，等效于[签名认证](https://help.upyun.com/knowledge-base/object_storage_authorization/#sign_auth)中的 Content-MD5
     pub content_md5: Option<String>
 }
+
+/// 上传文件的参数
+pub struct UploadParams {
+    /// 文件类型，默认使用文件扩展名作为文件类型
+    pub content_type: Option<String>,
+    /// 上传文件的 MD5 值，如果请求中文件太大计算 MD5 不方便，可以为空
+    pub content_md5: Option<String>,
+    /// 文件密钥，用于保护文件，防止文件被直接访问，见 [Content-Secret 参数说明](https://help.upyun.com/knowledge-base/rest_api/#Content-Secret)
+    pub content_secret: Option<String>,
+    /// 文件元信息，见 [Metadata](https://help.upyun.com/knowledge-base/rest_api/#metadata)
+    pub x_upyun_meta_x: Option<String>,
+    /// 文件元信息, 指定文件的生存时间，单位天，最大支持180天，见 [Metadata](https://help.upyun.com/knowledge-base/rest_api/#metadata)
+    pub x_upyun_meta_ttl: Option<u64>,
+    /// 图片预处理参数，见[上传预处理（同步）](https://help.upyun.com/knowledge-base/image/#sync_upload_process)
+    pub x_gmkerl_thumb: Option<String>
+
+}

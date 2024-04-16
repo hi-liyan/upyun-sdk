@@ -49,12 +49,12 @@ pub struct UpYun {
 
 /// Upyun 实例构造器
 pub struct UpyunBuilder {
-    pub bucket: Option<String>,
-    pub operator: Option<String>,
-    pub password: Option<String>,
-    pub timeout: Option<u64>,
-    pub endpoint: Option<Endpoint>,
-    pub danger_accept_invalid_certs: bool
+    bucket: Option<String>,
+    operator: Option<String>,
+    password: Option<String>,
+    timeout: Option<u64>,
+    endpoint: Option<Endpoint>,
+    danger_accept_invalid_certs: bool
 }
 
 impl UpYun {

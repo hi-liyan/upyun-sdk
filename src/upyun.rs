@@ -1,4 +1,4 @@
-use reqwest::Client;
+use reqwest::{Client, ClientBuilder};
 use crate::common::utils::md5;
 
 /// Rest Api 接入点
@@ -54,6 +54,7 @@ pub struct UpyunBuilder {
     pub password: Option<String>,
     pub timeout: Option<u64>,
     pub endpoint: Option<Endpoint>,
+    pub danger_accept_invalid_certs: bool
 }
 
 impl UpYun {
@@ -65,6 +66,7 @@ impl UpYun {
             password: None,
             timeout: None,
             endpoint: None,
+            danger_accept_invalid_certs: false
         }
     }
 }
@@ -100,6 +102,12 @@ impl UpyunBuilder {
         self
     }
 
+    /// 忽略证书验证
+    pub fn danger_accept_invalid_certs(mut self, danger_accept_invalid_certs: bool) -> Self {
+        self.danger_accept_invalid_certs = danger_accept_invalid_certs;
+        self
+    }
+
     /// 构造 Upyun 实例
     pub fn build(self) -> UpYun {
         if self.bucket.is_none() {
@@ -121,7 +129,10 @@ impl UpyunBuilder {
             timeout: self.timeout.unwrap_or(30 * 1000),
             // 默认为自动识别接入点
             endpoint: self.endpoint.unwrap_or(Endpoint::Auto),
-            client: Client::new()
+            client: ClientBuilder::new()
+                .danger_accept_invalid_certs(self.danger_accept_invalid_certs)
+                .build()
+                .unwrap()
         }
     }
 }

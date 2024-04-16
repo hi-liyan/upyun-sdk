@@ -32,11 +32,12 @@ upyun-sdk = "0.1.3"
 ```rust
 fn main() {
     let upyun = UpYun::builder()
-        .bucket("service_name")     // 必须
-        .operator("user")           // 必须
-        .password("123456")         // 必须
-        .timeout(30000)             // 请求超时时间，可选，默认30s
-        .endpoint(Endpoint::Auto) // 接入点，可选，默认为自动识别接入点
+        .bucket("service_name")             // 必须
+        .operator("user")                   // 必须
+        .password("123456")                 // 必须
+        .timeout(30000)                     // 请求超时时间，可选，默认30s
+        .endpoint(Endpoint::Auto)           // 接入点，可选，默认为自动识别接入点
+        .danger_accept_invalid_certs(false) // 忽略证书验证，可选，默认为 false
         .build();
 }
 ```
